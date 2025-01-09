@@ -1,0 +1,9 @@
+services:
+  letta:
+    image: letta/letta:latest
+    ports:
+      - 8283:8283
+    volumes:
+      - ~/.letta/.persist/pgdata:/var/lib/postgresql/data \
+    env_file:
+      - .env
