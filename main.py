@@ -31,16 +31,13 @@ def get_letta_response(agent_id: str, message: str):
 
 
 if __name__ == "__main__":
-    i = 0
-    while i < 1:
+    while True:
         message = input("> ")
         if message == ".exit":
-            i += 1
-            continue
+            break
 
         resp, error = get_letta_response(agent_id=AGENT_ID, message=message)
         if error:
-            i += 1
-            continue
+            break
 
         print(f"Letta: {resp}\n")
