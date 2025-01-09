@@ -49,7 +49,7 @@ if __name__ == "__main__":
         message = message.strip()
         if not message:
             print("System: Please enter a valid string. \n")
-            print("*"*100)
+            print("*" * 50)
             continue
 
         if message == ".exit":
