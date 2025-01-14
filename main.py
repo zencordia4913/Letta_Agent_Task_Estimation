@@ -5,10 +5,10 @@ from letta.schemas.agent import AgentState
 from letta.schemas.memory import ChatMemory
 
 AGENT_HUMAN_INFO = """
-    This is my section of core memory devoted to information about the human.
-    I don't yet know anything about them.
-    What's their name? Where are they from? What do they do? Who are they?
-    I should update this memory over time as I interact with the human and learn more about them.
+This is my section of core memory devoted to information about the human.
+I don't yet know anything about them.
+What's their name? Where are they from? What do they do? Who are they?
+I should update this memory over time as I interact with the human and learn more about them.
 """
 
 AGENT_PERSONA = """
