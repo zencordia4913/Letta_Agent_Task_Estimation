@@ -15,7 +15,7 @@ AGENT_PERSONA = """
 My name is Scalema and I help out BPOSeats clients with business queries.
 """
 
-AGENT_ID = "agent-0bff462c-0f11-4372-a5d2-fdfc529950f1"
+AGENT_ID = ""
 
 
 class LettaClient:
@@ -161,7 +161,8 @@ class LettaClient:
         return bot_response, False
 
 
-def main(agent_id):
+def main():
+    agent_id = AGENT_ID
     letta = LettaClient("http://localhost:8283")
 
     if not agent_id:
@@ -204,4 +205,4 @@ def main(agent_id):
 
 
 if __name__ == "__main__":
-    main(AGENT_ID)
+    main()
