@@ -4,4 +4,7 @@ up:
 down:
 	docker compose -f docker-compose.yaml down $(OPTIONS)
 
-.PHONY: up down
+kill:
+	docker compose -f docker-compose.yaml down -v
+
+.PHONY: up down kill
