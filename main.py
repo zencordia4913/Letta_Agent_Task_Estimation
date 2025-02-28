@@ -1,22 +1,30 @@
 import json
-
-from letta import EmbeddingConfig, LLMConfig, RESTClient, create_client
-from letta.schemas.agent import AgentState
-from letta.schemas.memory import ChatMemory
-
-AGENT_HUMAN_INFO = """
-This is my section of core memory devoted to information about the human.
-I don't yet know anything about them.
-What's their name? Where are they from? What do they do? Who are they?
-I should update this memory over time as I interact with the human and learn more about them.
-"""
-
-AGENT_PERSONA = """
-My name is Scalema and I help out BPOSeats clients with business queries.
-If it's your first time talking with a client be sure to inform them this.
-"""
+from letta_client import Letta
+from letta_client.types import AgentState
 
 AGENT_ID = ""
+
+TEXT_EMBEDDING_LETTA_FREE = "hugging-face/letta-free"
+TEXT_EMBEDDING_ADA = "openai/text-embedding-ada-002"
+TEXT_EMBEDDING_THREE_SMALL = "openai/text-embedding-3-small"
+TEXT_EMBEDDING_THREE_LARGE = "openai/text-embedding-3-large"
+
+HUMAN_MEMORY = {
+    "label": "human",
+    "value": (
+        "This is my section of core memory devoted to information about the human."
+        "I don't yet know anything about them."
+        "What's their name? Where are they from? What do they do? Who are they?"
+        "I should update this memory over time as I interact with the human and learn more about them."
+    ),
+}
+AGENT_MEMORY = {
+    "label": "persona",
+    "value": (
+        "My name is Scalema and I help out BPOSeats clients with business queries."
+        "If it's your first time talking with a client be sure to inform them this."
+    ),
+}
 
 
 class LettaClient:
@@ -24,51 +32,33 @@ class LettaClient:
 
     Attributes
     ----------
-    client           : RESTClient
+    client               : Letta
         An instance of the Letta client.
-    llm_config       : LLMConfig
-        Configuration of LLM model.
-    embedding_config : EmbeddingConfig
-        Embedding model configuration.
+    model                : str
+        LLM model to use.
+    embedding            : str
+        Embedding model to use.
+    context_window_limit : int
     """
 
-    llm_config = LLMConfig(
-        model="gpt-4o",
-        model_endpoint="https://api.openai.com/v1",
-        model_endpoint_type="openai",
-        context_window=128000,
-    )
-    embedding_config = EmbeddingConfig(
-        embedding_endpoint_type="openai",
-        embedding_endpoint="https://api.openai.com/v1",
-        embedding_model="text-embedding-ada-002",
-        embedding_dim=1536,
-        embedding_chunk_size=300,
-    )
+    model = "openai/gpt-4o"
+    embedding = TEXT_EMBEDDING_THREE_SMALL
+    context_window_limit = 16000
 
-    def __init__(self, base_url: str, token: str = None):
+    def __init__(self, base_url: str):
         """Constructs all necessary attributes for the LettaClient object.
 
         Parameters
         ----------
         base_url : str
             The base URL to the Letta server.
-        token    : str | None
-            The Letta server token.
         """
         self._base_url = base_url
-
-        if token:
-            self._headers = {"X-BARE-PASSWORD": f"password {token}"}
-            self.client = RESTClient(
-                base_url=self._base_url, token=token, headers=self._headers
-            )
-        else:
-            self.client = create_client(base_url=self._base_url)
+        self.client = Letta(base_url=self._base_url)
 
         # ! Check to see if provided credentials are valid.
         # ! Raises an error when invalid credentials are provided.
-        self.client.list_agents()
+        self.client.agents.list()
 
     def get_agents(self, **kwargs) -> list[dict]:
         """Get a list of available agents.
@@ -83,7 +73,7 @@ class LettaClient:
         list[dict]
             Returns a list of dicts containing ``id`` and ``name`` keys.
         """
-        agents = self.client.list_agents(**kwargs)
+        agents = self.client.agents.list(**kwargs)
         return [{"id": agent.id, "name": agent.name} for agent in agents]
 
     def create_agent(self, name: str, **kwargs) -> AgentState:
@@ -101,19 +91,25 @@ class LettaClient:
         AgentState
             The created agent instance.
         """
-        llm_config = kwargs.pop("llm_config", self.llm_config)
-        embedding_config = kwargs.pop("embedding_config", self.embedding_config)
+        model = kwargs.pop("model", self.model)
+        embedding = kwargs.pop("embedding", self.embedding)
+        context_window_limit = kwargs.pop(
+            "context_window_limit", self.context_window_limit
+        )
+        message_blocks = [
+            kwargs.pop("human_memory", HUMAN_MEMORY),
+            kwargs.pop("agent_memory", AGENT_MEMORY),
+        ]
 
-        return self.client.create_agent(
+        return self.client.agents.create(
             name=name,
-            llm_config=llm_config,
-            embedding_config=embedding_config,
-            **kwargs,
+            memory_blocks=message_blocks,
+            model=model,
+            context_window_limit=context_window_limit,
+            embedding=embedding,
         )
 
-    def chat_with_agent(
-        self, agent_id: str, message: str, role: str, **kwargs
-    ) -> tuple[str, bool]:
+    def chat_with_agent(self, agent_id: str, message: str, role: str, **kwargs):
         """Send a message to an agent and get the response.
 
         Parameters
@@ -144,41 +140,67 @@ class LettaClient:
             raise ValueError("Role must be either 'user' or 'system'")
 
         try:
-            response = self.client.send_message(
-                message=message,
-                role=role,
+            response = self.client.agents.messages.create(
                 agent_id=agent_id,
+                messages=[{"role": role, "content": message}],
                 **kwargs,
             )
 
         except ValueError as e:
-            error_message = "An error has occurred."
+            error_message = f"Error: {str(e)}"
             if "Agent not found" in str(e):
                 error_message = "Invalid agent id provided."
 
-            return error_message, True
+            return None, error_message, True
 
-        bot_response = (json.loads(response.messages[1].tool_call.arguments))["message"]
-        return bot_response, False
+        messages = []
+        resp = ""
+        for m in response.messages:
+            msg = {}
+            match m.message_type:
+                case "assistant_message":
+                    resp = m.content
+                    continue
+
+                case "reasoning_message":
+                    msg["content"] = m.reasoning
+                    msg["type"] = m.message_type
+                    messages.append(msg)
+                    continue
+
+                case (
+                    "system_message",
+                    "tool_call_message",
+                    "tool_return_message",
+                    "user_message",
+                ):
+                    msg["content"] = m.content
+                    msg["type"] = m.message_type
+                    messages.append(msg)
+                    continue
+
+                case _:
+                    continue
+
+        return resp, messages, False
 
 
 def main():
+    base_url = "http://localhost:8283"
     agent_id = AGENT_ID
-    letta = LettaClient("http://localhost:8283")
+
+    letta = LettaClient(base_url)
 
     if not agent_id:
-        agent_info = {
-            "memory": ChatMemory(persona=AGENT_PERSONA, human=AGENT_HUMAN_INFO),
-        }
-        agent = letta.create_agent("Scalema", **agent_info)
+        agent = letta.create_agent("Scalema")
         agent_id = agent.id
     else:
         message = "The user is back to chat, start a conversation."
-        response, error = letta.chat_with_agent(
+        response, _, error = letta.chat_with_agent(
             agent_id=agent_id, message=message, role="system"
         )
         if error:
-            print("An error has occurred")
+            print("An error has occured")
             return
 
         print(f"Letta: {response}\n")
@@ -194,11 +216,11 @@ def main():
         if message == ".exit":
             break
 
-        response, error = letta.chat_with_agent(
+        response, response_details, error = letta.chat_with_agent(
             agent_id=agent_id, message=message, role="user"
         )
         if error:
-            print(f"System: {response}")
+            print(f"System: {response_details}")
             print("*" * 50)
             continue
 

@@ -1,6 +1,6 @@
 services:
   letta:
-    image: letta/letta:0.6.9
+    image: letta/letta:0.6.34
     ports:
       - 8283:8283
     volumes:
