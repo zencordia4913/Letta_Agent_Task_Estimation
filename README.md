@@ -6,3 +6,5 @@ We can do either of the following:
 2. Compile all task information and pass them to an All-mini-lm-v2 for fine-tuning which in turn will give the
    results which we can store to a psql-pgvector. A tool call will be created to perform information retreival on this
    database to extract task hours from a task that is semantically closest to the user's query via cosine similarity.
+
+![Letta Overview](./image (21).png)
