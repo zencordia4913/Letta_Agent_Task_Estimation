@@ -11,7 +11,7 @@ import json
 app = FastAPI()
 
 # DGX Server API Endpoint
-DGX_API_URL_TRAIN = "http://202.92.159.242:8001/train" 
+DGX_API_URL_TRAIN = os.getenv("DGX_API_URL_TRAIN") 
 DGX_API_URL_INF = "http://202.92.159.242:8001/inference"
 
 # Django sys.path
@@ -105,7 +105,7 @@ def send_data():
         conn = psycopg2.connect(
             dbname="omni_data",
             user="jeryl4913",
-            password="bposeats",  
+            password=os.getenv("DB_PASSWORD"),  
             host="localhost",
             port="5433"
         )
