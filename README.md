@@ -7,4 +7,4 @@ We can do either of the following:
    results which we can store to a psql-pgvector. A tool call will be created to perform information retreival on this
    database to extract task hours from a task that is semantically closest to the user's query via cosine similarity.
 
-![Letta Overview](./image (21).png)
+![Letta Overview](./image_21.png)
