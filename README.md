@@ -1,77 +1,8 @@
-# Letta Terminal Example
+# Letta Agent
+This will servee as a demo on how task estimation can be used for a Letta Agent.
+We can do either of the following:
 
-A simple terminal Letta implementation. This is a proof of concept on how to work with Letta
-
-### Requirements
-
-- Python-3.10
-
-- Docker
-
-- Make (optional)
-
-## Getting started
-
-- Clone the repo
-
-- Create and activate a virtual environment
-
-```sh
-python3.10 -m venv venv
-
-source venv/bin/activate
-```
-
-- Install python dependencies
-
-```sh
-pip install -r requirements.txt
-```
-
-- Create a `.env` and add `OPEN_API_KEY`. Use your local GPT key
-
-```sh
-touch .env
-
-echo "OPEN_API_KEY='<LOCAL_GPT_KEY>'" >> .env
-```
-
-- Start the Letta docker service
-
-```sh
-sudo make up
-
-## If you don't have make installed, use the following
-sudo docker compose -f docker-compose.yaml up
-```
-
-- Set up a Letta agent. Got to [https://app.letta.com/](https://app.letta.com/) and login with `Google`.
-
-- Create a new agent. Preferably `Internet chatbot`.
-
-- Copy the agent ID below the agent name and paste it in the `main.py`
-
-- In another terminal session but the same directory, start the terminal app.
-
-```sh
-python main.py
-```
-
-- Start chatting with the bot.
-
-### How to stop the chat
-
-- Type `.exit`
-
-### How to stop the Letta server
-
-- Type `Ctrl + C`
-
-- Take down the docker instance
-
-```sh
-sudo make down
-
-## If you don't have make installed, use the following
-sudo docker compose -f docker-compose.yaml down
-```
+1. Add a tool call that receives inference from a different server which houses the task estimation model.
+2. Compile all task information and pass them to an All-mini-lm-v2 for fine-tuning which in turn will give the
+   results which we can store to a psql-pgvector. A tool call will be created to perform information retreival on this
+   database to extract task hours from a task that is semantically closest to the user's query via cosine similarity.
