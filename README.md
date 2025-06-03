@@ -8,3 +8,4 @@ We can do either of the following:
    database to extract task hours from a task that is semantically closest to the user's query via cosine similarity.
 
 ![Letta Overview](./image_21.png)
+![Letta Overview_2](./letta_ss.png)
